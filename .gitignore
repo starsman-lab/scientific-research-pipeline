@@ -1,0 +1,35 @@
+# 产物落盘目录（个人运行产物，不入库）
+research-output/
+outputs/
+results/
+
+# 知识库本地私有内容（论文卡 / 数据，按需自行决定是否入库）
+references/papers/
+references/data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+envs/
+*.egg-info/
+.pytest_cache/
+
+# 节点
+node_modules/
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# 日志与临时
+*.log
+.tmp/
+tmp/
+
+# WorkBuddy 本地
+.workbuddy/
