@@ -74,3 +74,13 @@ visibility: public
 ## 完成判定
 
 `review-report.md` 落盘 + 六维齐全 + 诚信检查完成 + HANDOFF.md 写完（含 `human_approved` 占位）→ 交还研究者做终审。
+
+---
+
+## 可执行脚本（scripts/）
+
+- `scripts/gate_check.py`：把「六维评分卡 + 诚信检查」部分自动化（**只读**，R3）。校验 6 维分值格式（1–5 + 门禁阈值）、回溯 `provenance.log` 找 null/error（编造数据信号）、扫描工作区 `\cite{key}` 核对 `library.bib`（虚假引用信号）；输出 `gate-check.json` + `gate-check.md`。仅标准库依赖。
+  ```bash
+  python skills/quality-gate/scripts/gate_check.py --review outputs/quality-gate/review-report.md --workdir outputs/ --bib references/library.bib
+  ```
+- 脚本只做可量化的机械核查与门禁初筛；六维的「理由/整改点」仍由 Agent 填写。最终 `human_approved` 仍须研究者确认（R6）。
