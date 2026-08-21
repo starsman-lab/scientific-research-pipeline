@@ -1,0 +1,67 @@
+name: Validate Skills
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate skill structure
+        run: |
+          python - <<'PY'
+          import os, sys, glob, re
+
+          ROOT = os.getcwd()
+          errors = []
+
+          # 1. Required foundation files must exist.
+          for f in ["Rule.md", "docs/STAGE-CONTRACTS.md", "README.md"]:
+              if not os.path.isfile(os.path.join(ROOT, f)):
+                  errors.append(f"missing required file: {f}")
+
+          # 2. Every skill must have SKILL.md with valid YAML frontmatter
+          #    containing at least `name` and `description`.
+          skill_dirs = sorted(glob.glob(os.path.join(ROOT, "skills", "*")))
+          if not skill_dirs:
+              errors.append("no skills/ directory found")
+          for sd in skill_dirs:
+              name = os.path.basename(sd)
+              sk = os.path.join(sd, "SKILL.md")
+              if not os.path.isfile(sk):
+                  errors.append(f"skill '{name}' is missing SKILL.md")
+                  continue
+              text = open(sk, encoding="utf-8").read()
+              m = re.match(r"^---\n(.*?)\n---", text, re.S)
+              if not m:
+                  errors.append(f"skill '{name}': SKILL.md has no YAML frontmatter")
+                  continue
+              fm = m.group(1)
+              for key in ["name", "description"]:
+                  if not re.search(rf"^\s*{key}\s*:", fm, re.M):
+                      errors.append(f"skill '{name}': frontmatter missing '{key}'")
+              # name in frontmatter should match the directory name
+              nm = re.search(r"^\s*name\s*:\s*(.+?)\s*$", fm, re.M)
+              if nm and nm.group(1).strip().strip('"').strip("'") != name:
+                  errors.append(
+                      f"skill '{name}': frontmatter name "
+                      f"'{nm.group(1).strip()}' != directory '{name}'"
+                  )
+
+          if errors:
+              print("VALIDATION FAILED:")
+              for e in errors:
+                  print(" -", e)
+              sys.exit(1)
+          print(f"VALIDATION OK: {len(skill_dirs)} skill(s) checked")
+          PY
