@@ -58,3 +58,15 @@ visibility: public
 ## 完成判定
 
 DataFrame 合并完成 + `stats-report.md` + ≥9 张图 + HANDOFF 写完 → 自动进 `paper-writing`（论文写作从 figures 与 report 搬数据，不重算）。
+
+---
+
+## 可执行脚本（scripts/）
+
+- `scripts/analyze.py`：把第 1–5 步落成代码。合并 `results/*.json` → pandas DataFrame → 主指标/效应量 → **Welch t 检验 + Holm 多重比较校正**（防 p-hacking）→ **≥9 张 300 DPI 科研色系图** → `stats-report.md`。依赖 `pandas numpy scipy matplotlib statsmodels`（标准科研栈）。
+  ```bash
+  python skills/data-analysis/scripts/analyze.py --results outputs/code-execution/results/ --out outputs/data-analysis/
+  # 无真实数据时可用 --demo 生成合成结果并跑通全流程，验证脚本本身
+  python skills/data-analysis/scripts/analyze.py --demo --out outputs/data-analysis/
+  ```
+- 脚本复用本 SKILL 的图清单顺序（箱线/条形±CI/散点/森林图/直方图/相关热力图/效应量/方差/散点带），色系用 muted 学术 hex（深蓝/砖红/苔绿），`savefig(dpi=300)`。
