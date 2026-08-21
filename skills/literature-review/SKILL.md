@@ -83,3 +83,15 @@ visibility: public
 ## 完成判定
 
 scan 与 gap 均有落盘文件 + provenance 有记录 + HANDOFF.md 写完 → 自动进下一 Stage（idea-validation）。
+
+---
+
+## 可执行脚本（scripts/）
+
+本技能配套真实工具，提示词驱动、脚本落地（参考 K-Dense-AI/scientific-agent-skills 的 `skill/scripts/` 模式）：
+
+- `scripts/fetch_papers.py`：调 arXiv API 批量抓取近 N 年论文，自动写入 `$RESEARCH_PIPELINE_ROOT/references/papers/<year>-<slug>.md` 卡与 `library.bib` 条目，每次调用写 provenance（R1）。**仅标准库依赖**，可离线跑初筛。
+  ```bash
+  python skills/literature-review/scripts/fetch_papers.py --query "multimodal medical foundation model" --max 20 --year-from 2024
+  ```
+- `scan` 模式的初筛优先用该脚本批量拉卡；`gap` 仍由 Agent 基于 scan 做结构化分析。脚本拉回的卡是 `gap` 与引用的真实来源（R2/R9）。
