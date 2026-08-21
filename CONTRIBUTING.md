@@ -108,3 +108,29 @@ python .github/build_site.py
 - 合并到 `main` 后，`pages.yml` 会自动把技能清单渲染为 GitHub Pages 站点。
 
 提交前请确认：frontmatter 合法、`name` 与目录一致、地基文件（`Rule.md` / `docs/STAGE-CONTRACTS.md` / `README.md`）引用无误。
+
+---
+
+## 8. 配套 scripts/ 可执行脚本规范
+
+本仓库与"纯提示词技能库"的关键区别在于：**每个 Stage skill 在 `skills/<name>/scripts/` 下挂真实可执行 Python，SKILL.md 末尾用「可执行脚本（scripts/）」段调用**。Agent 读提示词决策，脚本落地真实计算（参照 K-Dense-AI/scientific-agent-skills 的 `skill/scripts/` 模式）。
+
+原则：
+- **零依赖优先**：检索 / 解析 / 校验 / 路由类（fetch、novelty、citation、gate、pilot、run）只用标准库，任何环境可跑。
+- **科学栈显式声明**：仅 `data-analysis/analyze.py` 依赖 `pandas numpy scipy matplotlib statsmodels`，SKILL.md 调用段须写清安装命令。
+- **脚本是工具，提示词是调用说明**：执行逻辑写在 `scripts/`，不在 SKILL.md 正文堆代码。
+- **脚本同样守规则**：写 `provenance.log`（R1），失败标 `null` 不伪造（R0），只读不改稿（R3）。
+
+现有脚本：
+
+| skill | 脚本 | 作用 | 依赖 |
+|-------|------|------|------|
+| literature-review | `scripts/fetch_papers.py` | arXiv 批量抓取 → 写论文卡 + bib | 标准库 |
+| idea-validation | `scripts/check_novelty.py` | 近3年检索 + 文本重叠度筛查 | 标准库 |
+| experiment-design | `scripts/pilot_run.py` | 小批量预实验 baseline 验证 | 标准库（可选 sklearn） |
+| code-execution | `scripts/run_experiment.py` | 三路径真实执行 router | 标准库 |
+| data-analysis | `scripts/analyze.py` | 合并+检验+Holm 校正+≥9图 | pandas/numpy/scipy/matplotlib/statsmodels |
+| paper-writing | `scripts/check_citations.py` | `[CITATION NEEDED]` + bib 真实性校验 | 标准库 |
+| quality-gate | `scripts/gate_check.py` | 6维评分卡 + 诚信门禁初筛 | 标准库 |
+
+新增 Stage 时，若该阶段含可机械化执行的逻辑（检索、统计、校验、绘图、路由），应同步写 `scripts/` 并挂接到 SKILL.md。
