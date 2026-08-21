@@ -49,3 +49,13 @@ visibility: public
 ## 完成判定
 
 manuscript 落盘 + 自检清单过 + HANDOFF（human_approved=false）+ 无未上报偏差 → 交人工门禁（R6 定稿）。确认后置 `human_approved: true`，下游 `quality-gate` 启动只读评审。
+
+---
+
+## 可执行脚本（scripts/）
+
+- `scripts/check_citations.py`：落地第 4 步「引用 R2 铁律」的自动校验。扫描草稿找未解决的 `[CITATION NEEDED]`，并核对每个 `\cite{key}` 是否真实存在于 `$RESEARCH_PIPELINE_ROOT/references/library.bib`；输出 `citation-check.md` + JSON。仅标准库依赖。
+  ```bash
+  python skills/paper-writing/scripts/check_citations.py --draft outputs/paper-writing/manuscript/main.md --bib references/library.bib
+  ```
+- 定稿前必须跑该脚本：有 `[CITATION NEEDED]` 未解决或 `\cite` 缺失 → 拦截，不得进 quality-gate。
