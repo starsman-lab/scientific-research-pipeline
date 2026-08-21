@@ -92,3 +92,13 @@ visibility: public
 ## 完成判定
 
 plan.md + review.md 落盘 + HANDOFF 写完（human_approved=false）+ 无未上报偏差 → 交人工门禁（R6）。人工确认后置 `human_approved: true`，下游 `code-execution` 方可启动。
+
+---
+
+## 可执行脚本（scripts/）
+
+- `scripts/pilot_run.py`：Step 6 小批量预实验验证循环的**真实执行器**。读 `pre-exp/config.json`（字段：`data` / `target` / `n_sample` / `seed`），本地小批量跑 baseline，返回 metrics JSON 验证「能否跑通 + 方向是否正向」。纯 NumPy 多数类基线，**零第三方依赖**即可跑；检测到 scikit-learn 时自动升级更强基线。
+  ```bash
+  python skills/experiment-design/scripts/pilot_run.py --spec outputs/experiment-design/pre-exp/config.json --out outputs/experiment-design/pre-exp/pilot_metrics.json
+  ```
+- 该脚本把 Step 6 的「探索子 Agent 预实验」落成可审计的真实产物；每次执行写 provenance（R1），失败标 null 不补造（R0）。
