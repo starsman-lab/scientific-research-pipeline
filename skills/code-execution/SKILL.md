@@ -65,3 +65,21 @@ visibility: public
 ## 完成判定
 
 plan 中列出的每个实验都有对应 `results/*.json`（真实）或 `MANUAL.md` 说明 + provenance 完整无 null 造假 → 自动进 `data-analysis`。若仅 MANUAL 未回传，HANDOFF 标注 `blockers: 待人工回传` 并暂停（不伪造下游输入）。
+
+---
+
+## 可执行脚本（scripts/）
+
+- `scripts/run_experiment.py`：实现「三路径真实执行」的 router（对应 R7）。
+  ```bash
+  # 路径① 本地 venv 跑（优先）
+  python skills/code-execution/scripts/run_experiment.py --path local \
+    --script train.py --config cfg.yaml --out outputs/code-execution/results/run1.json
+  # 路径② 远程 GPU 任务包（自包含 train.py + run.sh + config）
+  python skills/code-execution/scripts/run_experiment.py --path remote \
+    --script train.py --config cfg.yaml --out outputs/code-execution/tasks/run1/
+  # 路径③ 手动执行说明
+  python skills/code-execution/scripts/run_experiment.py --path manual \
+    --script train.py --config cfg.yaml --out outputs/code-execution/MANUAL.md
+  ```
+- 脚本只做路由与 provenance 记录（R1）：local 非 0 退出码则结果标 `null` 不伪造；remote 仅打包不执行；manual 仅产出说明文档。仅标准库依赖。
