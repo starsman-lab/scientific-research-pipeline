@@ -1,4 +1,4 @@
-# 科研流水线 Harness — 落地概览（v1.1.0）
+# 科研流水线 Harness — 落地概览（v1.2.0）
 
 > 把"文献调研 → Idea 验证 → 实验设计 → 代码执行 → 数据分析 → 论文写作 → 质量把关"落地为受约束的 Agent Skills Harness。
 > 参照：K-Dense-AI/scientific-agent-skills、PKU-YuanGroup/OpenAI4S、Imbad0202/academic-research-skills、Yuan1z0825/nature-skills。
@@ -28,9 +28,10 @@
 - **便携式**：`research-pipeline/` 整仓可推 GitHub；`skills/` 符合 Agent Skills 标准，Claude Code / Codex 直接加载。
 - **半自动门禁**（R6）：常规阶段自动串联；实验设计、论文定稿、质量把关三处必须你确认才放行。
 
-## 各阶段当前状态（v1.1.0 全量建成）
+## 各阶段当前状态（v1.2.0）
 
 - ✅ 全部 7 阶段可用：1 文献调研、2 Idea 验证、3 实验设计、4 代码执行、5 数据分析、6 论文写作、7 质量把关
+- v1.2.0 新增：**每阶段 skill 均配 `scripts/` 真实可执行 Python**（fetch_papers / check_novelty / pilot_run / run_experiment / analyze / check_citations / gate_check），提示词驱动脚本落地，不再是纯 markdown 提示词库
 - 半自动门禁（R6）：3 实验设计、6 论文定稿、7 质量把关结论 三处需人工确认
 
 ## 下一步（持续迭代）
