@@ -1,5 +1,7 @@
 # research-pipeline — 科研流水线 Harness
 
+> English: [README.en.md](README.en.md) · 📦 GitHub: https://github.com/starsman-lab/scientific-research-pipeline
+
 > 把"文献调研 → Idea 验证 → 实验设计 → 代码执行 → 数据分析 → 论文写作 → 质量把关"拆成 7 个受约束的 Stage，
 > 每个 Stage 是一个 Sub-Agent，产物过门禁才能进下一环。对应 MVP 专家团"Phase 门禁 + 各司其职 + 反剧场"思路，
 > 但用于科研而非工程。
