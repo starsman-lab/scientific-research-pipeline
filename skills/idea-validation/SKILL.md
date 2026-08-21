@@ -67,3 +67,13 @@ visibility: public
 
 `report.md` 落盘 + 三问齐全 + HANDOFF.md 写完 → 自动进下一 Stage。
 仅当综合建议为 `推进` 或 `修改后推进` 时，下游 experiment-design 才可消费本报告。
+
+---
+
+## 可执行脚本（scripts/）
+
+- `scripts/check_novelty.py`：近 3 年 arXiv 检索 + 文本重叠度启发式（difflib 风格 token 重叠），输出 novelty 报告。这是**启发式筛查**，不替人决策（R6 精神）；最终 go/no-go 仍由研究者定。仅标准库依赖。
+  ```bash
+  python skills/idea-validation/scripts/check_novelty.py --idea "knowledge-constrained multimodal heart-failure risk model" --max 15
+  ```
+- Q1「近 3 年是否做过」优先用该脚本做量化初筛，Agent 再对 top 重叠论文做语义判断与三问叙事。
