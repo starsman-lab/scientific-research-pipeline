@@ -1,9 +1,9 @@
 ---
 name: research-pipeline
-description: "科研流水线主编排器：串联文献调研→Idea验证→实验设计→代码执行→数据分析→论文写作→质量把关七个受约束Stage，半自动模式，仅实验设计/论文定稿/质量把关三处需人工确认。每个Stage产物过门禁才进下一环。"
-description_zh: "科研流水线主编排器（7阶段调度，半自动）"
-description_en: "Research pipeline orchestrator (7-stage scheduler, semi-auto)"
-version: 1.0.0
+description: "科研流水线主编排器：串联文献调研→Idea验证→实验设计→代码执行→数据分析→论文写作→同行评审→质量把关八个受约束Stage，半自动模式，仅实验设计/论文定稿/质量把关三处需人工确认。每个Stage产物过门禁才进下一环；论文写作先建论证契约，同行评审产出Major/Minor后回退修订形成 review→revise 闭环。"
+description_zh: "科研流水线主编排器（8阶段调度，半自动 + review→revise 闭环）"
+description_en: "Research pipeline orchestrator (8-stage scheduler, semi-auto + review→revise loop)"
+version: 1.3.0
 tags: [research, pipeline, orchestrator, human-in-the-loop]
 display_name: "科研流水线"
 visibility: public
@@ -26,11 +26,21 @@ visibility: public
 ```
 [1] literature-review ──auto──> [2] idea-validation ──auto──> [3] experiment-design ──GATE──>
 [4] code-execution ──auto──> [5] data-analysis ──auto──> [6] paper-writing ──GATE(定稿)──>
-[7] quality-gate ──GATE──> 人类终审
+[7] peer-review ──auto/回退──> [6] revise (若有 Major) ──loop──> [8] quality-gate ──GATE──> 人类终审
 ```
 
-- **自动串联**：Stage 1、2、4、5 完成后若无 `blockers`，直接进下一环。
-- **人工门禁（必须停下等用户确认）**：Stage 3（实验设计）、Stage 6（论文定稿）、Stage 7（质量把关）。到这三处时，输出当前产物摘要 + "请确认后继续 / 打回修改"，**不得自动强推**。
+- **自动串联**：Stage 1、2、4、5、7 完成后若无 `blockers`，直接进下一环。
+- **review→revise 闭环**：Stage 7（peer-review）产出 Major/Minor；有 Major 时编排器
+  **回退到 Stage 6 执行 revise**，再回 Stage 7 复评，直到「可定稿」或人工介入（R6）。
+- **人工门禁（必须停下等用户确认）**：Stage 3（实验设计）、Stage 6（论文定稿）、Stage 8（质量把关）。到这三处时，输出当前产物摘要 + "请确认后继续 / 打回修改"，**不得自动强推**。
+
+## 各 Stage 借鉴的公开思路（v1.3.0 增强来源）
+
+- **论证契约 / proposal-first**：Yuan1z0825/nature-skills（先建证据+论证契约再起草，重建论证而非泛泛生成）。
+- **claim→evidence 收据 / review→revise 闭环**：Imbad0202/academic-research-skills（research→write→review→revise→finalize）。
+- **line-pinned citation / provenance / hypothesis 候选标注**：K-Dense-AI/scientific-agent-skills。
+- **统计审查 / 引用交叉验证 / 多面板证据**：Yuan1z0825/nature-skills 的 nature-statistics / nature-ref-verifier / nature-figure。
+- **Ledger-first 溯源**：PKU-YuanGroup/OpenAI4S（append-only action ledger，可重建）。
 
 ## 每 Stage 的调度方式
 
@@ -38,8 +48,10 @@ visibility: public
 
 - 文献调研 → `literature-review`（子模式 `scan` 或 `gap`，或两者连跑）
 - Idea 验证 → `idea-validation`
+- 论文写作 → `paper-writing`（先建 argument-contract.md）
+- 同行评审 → `peer-review`（只读，产出 Major/Minor；有 Major 回退 paper-writing revise）
 - 质量把关 → `quality-gate`
-- 实验设计 / 代码执行 / 数据分析 / 论文写作 → 当前版本尚未建成，到此处时**暂停并明确告知用户该 Stage 待建**，交还控制权。
+- 实验设计 / 代码执行 / 数据分析 → 当前版本尚未建成，到此处时**暂停并明确告知用户该 Stage 待建**，交还控制权。
 
 ## Handoff Envelope（交接信封）
 
@@ -56,9 +68,9 @@ visibility: public
 每完成一个 Stage 输出：
 
 ```
-[流水线进度] Stage <n>/7 <名称> 完成
+[流水线进度] Stage <n>/8 <名称> 完成
   产物: <path>
-  门禁: <auto通过 | 待你确认>
+  门禁: <auto通过 | 待你确认 | 回退 revise>
   下一步: <下一Stage 或 暂停原因>
 ```
 

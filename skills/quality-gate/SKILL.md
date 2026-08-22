@@ -35,8 +35,13 @@ visibility: public
 ## 诚信检查（最高优先级，对应 R0/R2）
 
 1. **编造数据检查**：抽取稿件中的关键数字/图表，回溯 `provenance.log` 与 `code-execution/results/*.json`，确认每个数字都有真实执行来源。任何无法回溯的数字 → 标 `FABRICATED_DATA` 风险。
-2. **虚假引用检查**：抽取稿件每处引用，核对 `$RESEARCH_PIPELINE_ROOT/references/library.bib` 或联网验证真实存在。出现 `[CITATION NEEDED]` 未解决、或作者/年份/卷期对不上的 → 标 `FABRICATED_CITATION` 风险。
-3. 任一风险命中 → 综合建议直接为 `不通过`，并列出具体位置。
+2. **虚假/弱引用检查**（参考 nature-ref-verifier + K-Dense-AI line-pinned）：
+   - 存在性：每处 `\cite{key}` 必须在 `library.bib` 中。
+   - 完整性：bib 条目不得带 `NEED-METADATA` 或缺失 author/title/year/venue，否则标 `INCOMPLETE_REF`。
+   - 相关性：条目标题/摘要与本研究主题明显无关 → 标 `WEAK_CITATION`（自动只能提示，最终由人判）。
+   - 出现 `[CITATION NEEDED]` 未解决、或作者/年份/卷期对不上 → 标 `FABRICATED_CITATION` 风险。
+3. **统计一致性检查**（参考 nature-statistics）：稿件中的 AUC/ACC/F1、p 值、效应量须与 `data-analysis/stats-report.md` 一致；不一致 → 标 `STATS_MISMATCH`。
+4. 任一风险命中 → 综合建议直接为 `不通过`，并列出具体位置。
 
 ## 只读评审（R3，铁律）
 
@@ -79,8 +84,8 @@ visibility: public
 
 ## 可执行脚本（scripts/）
 
-- `scripts/gate_check.py`：把「六维评分卡 + 诚信检查」部分自动化（**只读**，R3）。校验 6 维分值格式（1–5 + 门禁阈值）、回溯 `provenance.log` 找 null/error（编造数据信号）、扫描工作区 `\cite{key}` 核对 `library.bib`（虚假引用信号）；输出 `gate-check.json` + `gate-check.md`。仅标准库依赖。
+- `scripts/gate_check.py`：把「六维评分卡 + 诚信检查」部分自动化（**只读**，R3）。校验 6 维分值格式（1–5 + 门禁阈值）、回溯 `provenance.log` 找 null/error（编造数据信号）、扫描工作区 `\cite{key}` 核对 `library.bib`（虚假/弱引用信号）、比对稿件与 `stats-report.md` 的数字（统计一致性）；输出 `gate-check.json` + `gate-check.md`。仅标准库依赖。
   ```bash
-  python skills/quality-gate/scripts/gate_check.py --review outputs/quality-gate/review-report.md --workdir outputs/ --bib references/library.bib
+  python skills/quality-gate/scripts/gate_check.py --review outputs/quality-gate/review-report.md --workdir outputs/ --bib references/library.bib --stats outputs/5-data-analysis/stats-report.md
   ```
 - 脚本只做可量化的机械核查与门禁初筛；六维的「理由/整改点」仍由 Agent 填写。最终 `human_approved` 仍须研究者确认（R6）。

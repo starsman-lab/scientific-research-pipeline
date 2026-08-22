@@ -19,6 +19,19 @@ visibility: public
 - 上游 `outputs/lit-review/gap-analysis.md`（来自 literature-review，提供领域空白上下文）。
 - 可选：研究者已有的初步实验迹象。
 
+## 前置：候选假设（candidate hypothesis，必须先在报告里写）
+
+在跑三问前，先把 idea 落成**一条可被证伪的候选假设**（参考 K-Dense-AI 的
+Hypothesis Generation「保持为 candidate，不断言」）：
+
+- **假设 H**：<一句可证伪的陈述，含方向>
+- **预测 P**：若 H 成立，则 <可观测结果，须能量化>
+- **证伪条件**：若 <结果相反/无差异]，则 H 被拒
+- 状态标注：`candidate`（未经实验验证，不得写成「我们证明」）
+
+这条假设是 experiment-design 与 paper-writing 论证契约（argument-contract）的输入：
+论文的 Contribution 必须能回应该假设的预测。
+
 ## 三问（必须逐条作答）
 
 ### Q1：近 3 年是否有人做过？
@@ -44,6 +57,11 @@ visibility: public
 
 ```markdown
 # Idea Validation Report: <idea 一句话>
+## Candidate Hypothesis
+- H: <可证伪假设>
+- P: <预测，须可量化>
+- 证伪条件: <...>
+- 状态: candidate
 ## Q1 是否做过: <结论>
 - 撞车论文: <列表+交集说明>
 ## Q2 故事评分: <均分>/5

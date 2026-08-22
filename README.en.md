@@ -1,6 +1,6 @@
 # research-pipeline — A Research Pipeline Harness
 
-> Break the loop "literature review → idea validation → experiment design → code execution → data analysis → paper writing → quality gate" into 7 constrained stages.
+> Break the loop "literature review → idea validation → experiment design → code execution → data analysis → paper writing → peer review → quality gate" into 8 constrained stages.
 > Each stage is a sub-agent; its artifact must pass a gate before the next stage starts. It reuses the MVP expert-team idea of "phase gates + clear division of labor + no-theater", but for research instead of engineering.
 >
 > Design references: K-Dense-AI/scientific-agent-skills, PKU-YuanGroup/OpenAI4S, Imbad0202/academic-research-skills, Yuan1z0825/nature-skills.
@@ -15,7 +15,7 @@
 - **Real citations (R2)**: mark anything unverified as `[CITATION NEEDED]`.
 - **Semi-automatic (R6)**: routine stages chain automatically; only experiment design, paper finalization, and the quality-gate conclusion need the researcher's explicit confirmation.
 
-## Status (v1.1.0)
+## Status (v1.3.0)
 
 | Stage | Skill | Status | Gate |
 |-------|-------|--------|------|
@@ -25,7 +25,15 @@
 | 4 Code execution | `code-execution` | ✅ ready | auto |
 | 5 Data analysis | `data-analysis` | ✅ ready | auto |
 | 6 Paper writing | `paper-writing` | ✅ ready | human confirm on finalize (R6) |
-| 7 Quality gate | `quality-gate` | ✅ ready | human confirm (R6) |
+| 7 Peer review | `peer-review` | ✅ ready | auto (revision loop on Major) |
+| 8 Quality gate | `quality-gate` | ✅ ready | human confirm (R6) |
+
+> **v1.3.0 enhancements (inspired by 4 open-source research-agent repos)**
+> - **Argument contract / proposal-first**: before drafting, `paper-writing` writes `argument-contract.md` (thesis + ≤3 contributions each pinned to evidence + mechanism hypothesis + threats to validity), then drafts (nature-skills).
+> - **review → revise loop**: new `peer-review` stage simulates 2–3 reviewers producing Major/Minor; a Major triggers a fallback to `paper-writing` for revision (academic-research-skills).
+> - **Citation strictness**: literature fetch scores relevance (only high/medium enter the library); quality gate adds a ref-verifier (flags `INCOMPLETE_REF`) + stats consistency (manuscript vs stats-report), directly catching "present-but-irrelevant / incomplete" citations (nature-ref-verifier / nature-statistics).
+> - **line-pinned / candidate hypothesis**: citations bind to concrete sources; idea validation writes a falsifiable `candidate` hypothesis first (K-Dense-AI).
+> - **Ledger-first provenance**: every execution appends to the provenance ledger (OpenAI4S).
 
 Foundation files: `Rule.md` (hard rules R0–R10), `docs/STAGE-CONTRACTS.md` (stage contracts), `references/` (knowledge-base scaffold).
 
@@ -47,7 +55,7 @@ One-shot deploy (PowerShell / Git Bash):
 cp -r skills/* "$HOME/.workbuddy/skills/"
 ```
 
-After deploy, say "run research pipeline / literature review / idea validation / experiment design / code execution / data analysis / paper writing / quality gate" in this session to trigger.
+After deploy, say "run research pipeline / literature review / idea validation / experiment design / code execution / data analysis / paper writing / peer review / quality gate" in this session to trigger.
 
 ### B. Claude Code / Codex (portable)
 

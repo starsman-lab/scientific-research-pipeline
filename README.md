@@ -2,7 +2,7 @@
 
 > English: [README.en.md](README.en.md) · 📦 GitHub: https://github.com/starsman-lab/scientific-research-pipeline
 
-> 把"文献调研 → Idea 验证 → 实验设计 → 代码执行 → 数据分析 → 论文写作 → 质量把关"拆成 7 个受约束的 Stage，
+> 把"文献调研 → Idea 验证 → 实验设计 → 代码执行 → 数据分析 → 论文写作 → 同行评审 → 质量把关"拆成 8 个受约束的 Stage，
 > 每个 Stage 是一个 Sub-Agent，产物过门禁才能进下一环。对应 MVP 专家团"Phase 门禁 + 各司其职 + 反剧场"思路，
 > 但用于科研而非工程。
 >
@@ -16,7 +16,7 @@
 - **引用真实**（R2）：未确认标 `[CITATION NEEDED]`。
 - **半自动**（R6）：常规阶段自动串联，仅实验设计 / 论文定稿 / 质量把关三处人工确认。
 
-## 当前进度（v1.1.0）
+## 当前进度（v1.3.0）
 
 | Stage | 技能 | 状态 | 门禁 |
 |-------|------|------|------|
@@ -26,7 +26,15 @@
 | 4 代码执行 | `code-execution` | ✅ 可用 | 自动 |
 | 5 数据分析 | `data-analysis` | ✅ 可用 | 自动 |
 | 6 论文写作 | `paper-writing` | ✅ 可用 | 定稿人工确认（R6） |
-| 7 质量把关 | `quality-gate` | ✅ 可用 | 人工确认（R6） |
+| 7 同行评审 | `peer-review` | ✅ 可用 | 自动（有 Major 回退 revise） |
+| 8 质量把关 | `quality-gate` | ✅ 可用 | 人工确认（R6） |
+
+> **v1.3.0 增强（借鉴 4 个开源科研 agent 仓库）**
+> - **论证契约 / proposal-first**：论文写作先在 `argument-contract.md` 写 thesis + ≤3 条贡献（每条挂证据）+ 机制假设 + 威胁效度，再起草（nature-skills）。
+> - **review → revise 闭环**：新增 `peer-review` 阶段，模拟 2–3 审稿人输出 Major/Minor，命中 Major 回退 `paper-writing` 修订（academic-research-skills）。
+> - **引用严格化**：文献抓取按相关性评分（高/中才入库），质量把关新增 ref-verifier（标 `INCOMPLETE_REF`）+ 统计一致性（稿件 vs stats-report），直接抓「存在但不相关/不完整」的引用（nature-ref-verifier / nature-statistics）。
+> - **line-pinned / 候选假设**：引用绑定具体来源；Idea 验证先写可证伪的 candidate hypothesis（K-Dense-AI）。
+> - **Ledger-first 溯源**：每次执行追加 provenance（OpenAI4S）。
 
 地基文件：`Rule.md`（硬规则 R0–R10）、`docs/STAGE-CONTRACTS.md`（阶段契约）、`references/`（知识库脚手架）。
 
@@ -48,7 +56,7 @@
 cp -r skills/* "$HOME/.workbuddy/skills/"
 ```
 
-部署后在本会话说"运行科研流水线 / 文献调研 / Idea 验证 / 实验设计 / 代码执行 / 数据分析 / 论文写作 / 质量把关"即可触发。
+部署后在本会话说"运行科研流水线 / 文献调研 / Idea 验证 / 实验设计 / 代码执行 / 数据分析 / 论文写作 / 同行评审 / 质量把关"即可触发。
 
 ### B. Claude Code / Codex（可移植）
 

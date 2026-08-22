@@ -86,25 +86,77 @@ def _load_results(results_dir: str):
     return rows, nulls
 
 
-def _stats_block(df, metrics):
+def _boot_ci(data, statistic, n_boot=10000, ci=0.95, rng=None):
+    """Percentile bootstrap confidence interval for a sample statistic."""
+    import numpy as np
+    if rng is None:
+        rng = np.random.default_rng(0)
+    data = np.asarray(data)
+    boot = [statistic(rng.choice(data, size=len(data), replace=True)) for _ in range(n_boot)]
+    alpha = (1 - ci) / 2
+    return float(np.percentile(boot, alpha * 100)), float(np.percentile(boot, (1 - alpha) * 100))
+
+
+def _paired_stats(df, metrics):
+    """Paired baseline-vs-proposed stats and Cohen's d_z with bootstrap CIs.
+
+    Runs are paired by seed (same train/test split). We use the paired t-test
+    and Cohen's d_z = mean(diff) / sd(diff). Bootstrap percentile CIs are
+    reported for both the raw mean difference and the effect size.
+    """
     import numpy as np
     import scipy.stats as st
     from statsmodels.stats.multitest import multipletests  # type: ignore
-    lines = []
+
+    base = df[df.method == "baseline"].sort_values("seed").set_index("seed")
+    prop = df[df.method == "proposed"].sort_values("seed").set_index("seed")
+    common = base.index.intersection(prop.index)
+
+    rows = []
     pvals = []
-    # paired comparison proposed vs baseline across runs (method is the grouping)
-    base = df[df.method == "baseline"]
-    prop = df[df.method == "proposed"]
+    rng = np.random.default_rng(42)
     for met in metrics:
-        t, p = st.ttest_ind(prop[met].values, base[met].values, equal_var=False)
-        d = (prop[met].mean() - base[met].mean()) / df[met].std(ddof=1)
-        pvals.append(p)
-        lines.append(f"- {met}: baseline={base[met].mean():.3f} proposed={prop[met].mean():.3f} "
-                     f"cohen_d={d:.3f} p={p:.2e}")
+        b = base.loc[common, met].values
+        p = prop.loc[common, met].values
+        diff = p - b
+        t, pval = st.ttest_rel(p, b)
+        d = float(diff.mean() / diff.std(ddof=1))
+        d_lo, d_hi = _boot_ci(diff, statistic=lambda x: float(x.mean() / x.std(ddof=1)), rng=rng)
+        md = float(diff.mean())
+        md_lo, md_hi = _boot_ci(diff, statistic=lambda x: float(x.mean()), rng=rng)
+        pvals.append(pval)
+        rows.append({
+            "metric": met,
+            "baseline_mean": float(b.mean()),
+            "proposed_mean": float(p.mean()),
+            "mean_diff": md,
+            "mean_diff_ci": (md_lo, md_hi),
+            "cohen_dz": d,
+            "cohen_dz_ci": (d_lo, d_hi),
+            "raw_p": float(pval),
+        })
     rejected, pvals_corr, _, _ = multipletests(pvals, method="holm")
+    for r, pc, rej in zip(rows, pvals_corr, rejected):
+        r["holm_p"] = float(pc)
+        r["significant"] = bool(rej)
+    return rows
+
+
+def _stats_block(df, metrics):
+    rows = _paired_stats(df, metrics)
+    lines = []
+    for r in rows:
+        md_lo, md_hi = r["mean_diff_ci"]
+        lines.append(
+            f"- {r['metric']}: baseline={r['baseline_mean']:.3f} proposed={r['proposed_mean']:.3f} "
+            f"mean_diff={r['mean_diff']:+.3f} [{md_lo:+.3f}, {md_hi:+.3f}] "
+            f"cohen_dz={r['cohen_dz']:.3f} p={r['raw_p']:.2e}"
+        )
     lines.append("\nMultiple-comparison correction (Holm):")
-    for met, p, pc, r in zip(metrics, pvals, pvals_corr, rejected):
-        lines.append(f"- {met}: raw_p={p:.2e} holm_p={pc:.2e} sig={bool(r)}")
+    for r in rows:
+        lines.append(
+            f"- {r['metric']}: raw_p={r['raw_p']:.2e} holm_p={r['holm_p']:.2e} sig={r['significant']}"
+        )
     return "\n".join(lines)
 
 
@@ -153,15 +205,15 @@ def _figures(df, out_dir, metrics):
     ax.set_title("Per-run AUC (above line = improvement)")
     _save(fig, "fig3_scatter_auc.png")
 
-    # 4. forest plot of Cohen's d
+    # 4. forest plot of paired Cohen's d_z with bootstrap 95% CI
+    paired = _paired_stats(df, metrics)
+    ds = [r["cohen_dz"] for r in paired]
+    ci_low = [r["cohen_dz"] - r["cohen_dz_ci"][0] for r in paired]
+    ci_high = [r["cohen_dz_ci"][1] - r["cohen_dz"] for r in paired]
     fig, ax = plt.subplots(figsize=(6, 3))
-    ds = []
-    for met in metrics:
-        d = (df[df.method == "proposed"][met].mean() - df[df.method == "baseline"][met].mean()) / df[met].std(ddof=1)
-        ds.append(d)
-    ax.errorbar(ds, range(len(metrics)), xerr=[0.2] * len(metrics), fmt="o", color=C_PRIMARY)
+    ax.errorbar(ds, range(len(metrics)), xerr=[ci_low, ci_high], fmt="o", color=C_PRIMARY, capsize=4)
     ax.axvline(0, color=C_GRID); ax.set_yticks(range(len(metrics))); ax.set_yticklabels(metrics)
-    ax.set_title("Effect size (Cohen's d)"); ax.set_xlabel("d")
+    ax.set_title("Paired effect size (Cohen's d_z) with 95% CI"); ax.set_xlabel("d_z")
     _save(fig, "fig4_forest_effect.png")
 
     # 5. distribution histogram
@@ -183,10 +235,12 @@ def _figures(df, out_dir, metrics):
     ax.set_title("Metric correlation")
     _save(fig, "fig6_corr_heatmap.png")
 
-    # 7. effect-size comparison bar
+    # 7. effect-size comparison bar with bootstrap 95% CI
     fig, ax = plt.subplots(figsize=(5, 4))
-    ax.bar(metrics, ds, color=PALETTE[:len(metrics)])
-    ax.axhline(0, color=C_GRID); ax.set_title("Cohen's d by metric"); ax.set_ylabel("d")
+    err = [[r["cohen_dz"] - r["cohen_dz_ci"][0] for r in paired],
+           [r["cohen_dz_ci"][1] - r["cohen_dz"] for r in paired]]
+    ax.bar(metrics, ds, yerr=err, capsize=4, color=PALETTE[:len(metrics)])
+    ax.axhline(0, color=C_GRID); ax.set_title("Paired Cohen's d_z by metric"); ax.set_ylabel("d_z")
     _save(fig, "fig7_effect_bar.png")
 
     # 8. spread (std) by metric
@@ -252,7 +306,14 @@ def main() -> int:
         f.write(f"# Statistical Analysis Report\n\n")
         f.write(f"- valid runs: {len(df)}  (null/error excluded: {nulls})\n")
         f.write(f"- methods: {sorted(df.method.unique())}\n- metrics: {metrics}\n\n")
-        f.write("## Tests (Welch t-test + Holm correction)\n\n" + stats + "\n\n")
+        f.write("## Tests (paired t-test + Holm correction)\n\n" + stats + "\n\n")
+        f.write("## Notes on effect size\n\n")
+        f.write("Comparisons are **paired by seed** (same train/test split). Cohen's d_z "
+                "is the mean paired difference divided by the standard deviation of the "
+                "differences. Because AUC/ACC/F1 are bounded in [0, 1] and several means "
+                "are near the ceiling, d_z can appear large even when the absolute "
+                "difference is small; report the mean difference and its 95% CI alongside "
+                "d_z for calibration.\n\n")
         f.write("## Figures\n\n")
         for p in figs:
             f.write(f"![{os.path.basename(p)}]({os.path.basename(p)})\n")

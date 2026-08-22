@@ -48,7 +48,22 @@ def _slug(title: str) -> str:
     return s[:60] or "untitled"
 
 
-def _arxiv_search(query: str, max_n: int, year_from: int):
+def _relevance(query: str, title: str, summary: str) -> str:
+    """Token-overlap relevance: 高/中/低 vs the research query."""
+    q_tokens = set(re.findall(r"[a-z0-9]{4,}", query.lower()))
+    doc = (title + " " + summary).lower()
+    doc_tokens = set(re.findall(r"[a-z0-9]{4,}", doc))
+    if not q_tokens:
+        return "中"
+    overlap = len(q_tokens & doc_tokens) / max(1, len(q_tokens))
+    if overlap >= 0.5:
+        return "高"
+    if overlap >= 0.25:
+        return "中"
+    return "低"
+
+
+def _arxiv_search(query: str, max_n: int, year_from: int, keep_low: bool = False):
     url = (
         "http://export.arxiv.org/api/query?search_query=all:"
         + urllib.parse.quote(query)
@@ -68,6 +83,9 @@ def _arxiv_search(query: str, max_n: int, year_from: int):
         published = entry.findtext("a:published", "", NS)[:4]
         if published and int(published) < year_from:
             continue
+        rel = _relevance(query, title, summary)
+        if rel == "低" and not keep_low:
+            continue  # 低相关不入库，避免污染引用（R2 相关性）
         aid_url = entry.findtext("a:id", "", NS)
         aid = aid_url.rsplit("/", 1)[-1]
         authors = [a.findtext("a:name", "", NS) for a in entry.findall("a:author", NS)]
@@ -81,6 +99,7 @@ def _arxiv_search(query: str, max_n: int, year_from: int):
             "year": published,
             "url": aid_url,
             "categories": cats,
+            "relevance": rel,
         })
     return out, None
 
@@ -91,6 +110,7 @@ def _card_md(p: dict) -> str:
         f"# {p['title']}\n\n"
         f"- **Source**: {p['source']} `{p['id']}`\n"
         f"- **Year**: {p['year']}\n"
+        f"- **Relevance**: {p.get('relevance', '中')}\n"
         f"- **Authors**: {authors}\n"
         f"- **URL**: {p['url']}\n"
         f"- **Categories**: {', '.join(p['categories'])}\n\n"
@@ -100,19 +120,22 @@ def _card_md(p: dict) -> str:
         f"- arxiv: {p['id']}\n\n"
         f"## Notes (fill after reading)\n\n"
         f"- method: \n- dataset: \n- metric: \n- gap: \n"
+        f"- related_work_role: <支持/对照/相邻>\n"
     )
 
 
 def _bib_entry(p: dict) -> str:
     key = f"{p['source']}{p['year']}{_slug(p['title'])[:12]}"
     authors = " and ".join(p["authors"][:3])
+    # arxiv 提供 title/author/year；不带 NEED-METADATA 占位（quality-gate 会查完整性）
     return (
         f"@article{{{key},\n"
         f"  title = {{{p['title']}}},\n"
         f"  author = {{{authors}}},\n"
         f"  year = {{{p['year']}}},\n"
         f"  url = {{{p['url']}}},\n"
-        f"  note = {{NEED-METADATA}}\n"
+        f"  eprint = {{{p['id']}}},\n"
+        f"  relevance = {{{p.get('relevance', '中')}}}\n"
         f"}}\n\n"
     )
 
@@ -164,10 +187,13 @@ def main() -> int:
     report = os.path.join(args.workdir, "scan.md")
     with open(report, "w", encoding="utf-8") as f:
         f.write(f"# Literature Scan — {args.query}\n\n")
-        f.write(f"- query: {args.query}\n- year_from: {args.year_from}\n- fetched: {written}\n\n")
+        f.write(f"- query: {args.query}\n- year_from: {args.year_from}\n"
+                f"- fetched (高/中相关): {written}\n- skipped (低相关, 不入库): {args.max - len(papers)}\n\n")
+        f.write("| # | 标题 | 年 | 相关性 | 来源 |\n|---|------|----|--------|------|\n")
         for i, p in enumerate(papers, 1):
-            f.write(f"{i}. **{p['title']}** ({p['year']}) — {p['url']}\n")
-    print(f"[fetch_papers] done: {written} papers -> {papers_dir}; report -> {report}")
+            f.write(f"| {i} | {p['title']} | {p['year']} | {p.get('relevance','中')} | {p['url']} |\n")
+    print(f"[fetch_papers] done: {written} papers (高/中相关) -> {papers_dir}; "
+          f"skipped {args.max - len(papers)} 低相关; report -> {report}")
     return 0
 
 
